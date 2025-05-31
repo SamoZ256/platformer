@@ -20,7 +20,9 @@ SCREEN_HEIGHT = 600
 def world_to_screen(pos, camera_pos):
     return (pos[0] - camera_pos[0] + SCREEN_WIDTH / 2, pos[1] - camera_pos[1] + SCREEN_HEIGHT / 2)
 
-GRAVITY = 1
+GRAVITY = 3000
+PLAYER_SPEED = 400
+PLAYER_JUMP_HEIGHT = 1000
 
 TILE_SIZE = 32
 CHUNK_WIDTH = 8
@@ -74,14 +76,21 @@ class ChunkManager:
     def update(self, camera_pos):
         visible = self.get_visible_chunk_range(camera_pos)
         for chunk_x in range(visible[0], visible[1]):
-            if not chunk_x in self.chunks:
-                self.chunks[chunk_x] = Chunk(chunk_x)
+            self.ensure_chunk(chunk_x)
 
     def draw(self, surface, camera_pos):
         visible = self.get_visible_chunk_range(camera_pos)
         for chunk_x in range(visible[0], visible[1]):
             chunk = self.chunks[chunk_x]
             chunk.draw(surface, camera_pos)
+
+    def ensure_chunk(self, chunk_x):
+        if not chunk_x in self.chunks:
+            self.chunks[chunk_x] = Chunk(chunk_x)
+
+    def get_chunk(self, chunk_x):
+        self.ensure_chunk(chunk_x)
+        return self.chunks[chunk_x]
 
     def get_chunk_range(self, left, right):
         begin = floor(left / TILE_SIZE / CHUNK_WIDTH)
@@ -101,69 +110,80 @@ class World:
     def draw(self, surface, camera_pos):
         self.chunk_manager.draw(surface, camera_pos)
 
-class MovableObject(pygame.sprite.Sprite):
+class MovableObject:
     def __init__(self):
-        super().__init__()
-
-        self.image = pygame.Surface([40, 60])
+        self.size = (40, 60) # TODO: don't hardcode
+        self.image = pygame.Surface(self.size)
         self.image.fill(RED)
 
-        self.rect = self.image.get_rect()
+        self.position = [0.0, 0.0]
+        self.movement = [0.0, 0.0]
+        self.y_momentum = 0.0
+        self.is_on_ground = False
 
-        self.move_x = 0
-        self.move_y = 0
-        self.y_momentum = 0
-
-    # TODO: clean up
-    def update(self, world):
-        self.y_momentum += GRAVITY
-        self.move_y += self.y_momentum
+    def update(self, world, dt):
+        self.y_momentum += GRAVITY * dt
+        self.movement[1] += self.y_momentum
 
         # X
-        if self.move_x != 0:
-            self.rect.x += self.move_x
-            rect = self.collide(world)
-            if rect:
-                if self.move_x > 0:
-                    self.rect.right = rect.left
+        if self.movement[0] != 0:
+            self.position[0] += self.movement[0] * dt
+            tile_rect = self.collide(world)
+            if tile_rect:
+                if self.movement[0] > 0:
+                    self.position[0] = tile_rect.left - self.size[0]
                 else:
-                    self.rect.left = rect.right
-            self.move_x = 0
+                    self.position[0] = tile_rect.right
+            self.movement[0] = 0
 
         # Y
-        if self.move_y != 0:
-            self.rect.y += self.move_y
-            rect = self.collide(world)
-            if rect:
-                if self.move_y > 0:
-                    self.rect.bottom = rect.top
+        if self.movement[1] != 0:
+            self.position[1] += self.movement[1] * dt
+            tile_rect = self.collide(world)
+            if tile_rect:
+                if self.movement[1] > 0:
+                    self.position[1] = tile_rect.top - self.size[1]
+                    self.is_on_ground = True
                 else:
-                    self.rect.top = rect.bottom
+                    self.position[1] = tile_rect.bottom
                 self.y_momentum = 0
-            self.move_y = 0
+            self.movement[1] = 0
 
     def collide(self, world):
-        chunk_range = world.chunk_manager.get_chunk_range(self.rect.left, self.rect.right)
+        rect = self.get_rect()
+        chunk_range = world.chunk_manager.get_chunk_range(rect.left, rect.right)
         for chunk_x in range(chunk_range[0], chunk_range[1]):
-            chunk = world.chunk_manager.chunks[chunk_x]
-            tile_x_range = chunk.get_tile_x_range(self.rect.left, self.rect.right)
-            tile_y_range = chunk.get_tile_y_range(self.rect.top, self.rect.bottom)
+            chunk = world.chunk_manager.get_chunk(chunk_x)
+            tile_x_range = chunk.get_tile_x_range(rect.left, rect.right)
+            tile_y_range = chunk.get_tile_y_range(rect.top, rect.bottom)
             for tile_x in range(tile_x_range[0], tile_x_range[1]):
                 for tile_y in range(tile_y_range[0], tile_y_range[1]):
                     if chunk.get_tile(tile_x, tile_y) == 0:
                         continue
 
                     tile_rect = chunk.get_tile_rect(tile_x, tile_y)
-                    collide = pygame.Rect.colliderect(self.rect, tile_rect)
+                    collide = pygame.Rect.colliderect(rect, tile_rect)
                     if collide:
                         return tile_rect
 
         return None
 
     def draw(self, surface, camera_pos):
-        rect = self.rect.copy()
+        rect = self.get_rect()
         rect.topleft = world_to_screen(rect.topleft, camera_pos)
         surface.blit(self.image, rect)
+
+    def get_rect(self):
+        return pygame.Rect(self.position[0], self.position[1], self.size[0], self.size[1])
+
+    def move(self, m):
+        self.movement[0] += m[0]
+        self.movement[1] += m[1]
+
+    def try_jump(self, height):
+        if self.is_on_ground:
+            self.y_momentum = -height
+            self.is_on_ground = False
 
 pygame.init()
 
@@ -178,7 +198,7 @@ world = World()
 
 # Player
 player = MovableObject()
-player.rect.center = (0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2 - 100)
+player.position = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2 - 100]
 
 clock = pygame.time.Clock()
 
@@ -192,25 +212,25 @@ while not done:
             done = True
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                player.y_momentum = -20
+                player.try_jump(PLAYER_JUMP_HEIGHT)
+
+    dt = clock.tick(60) / 1000
 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
-        player.move_x -= 5
+        player.move([-PLAYER_SPEED, 0])
     if keys[pygame.K_d]:
-        player.move_x += 5
+        player.move([PLAYER_SPEED, 0])
 
     # Update
     world.update(camera_pos)
-    player.update(world)
+    player.update(world, dt)
 
     # Draw
     screen.fill((0, 0, 0))
 
     world.draw(screen, camera_pos)
     player.draw(screen, camera_pos)
-
-    clock.tick(60)
 
     pygame.display.flip()
 
