@@ -20,9 +20,9 @@ BLUE = (0, 0, 255)
 def world_to_screen(pos, camera_pos):
     return (pos[0] - camera_pos[0] + SCREEN_WIDTH / 2, pos[1] - camera_pos[1] + SCREEN_HEIGHT / 2)
 
-GRAVITY = 3000
-PLAYER_SPEED = 400
-PLAYER_JUMP_HEIGHT = 1000
+GRAVITY = 2000
+PLAYER_SPEED = 200
+PLAYER_JUMP_HEIGHT = 500
 
 TILE_SIZE = 32
 CHUNK_WIDTH = 8
@@ -117,6 +117,7 @@ class MovableObject:
         self.position = [0.0, 0.0]
         self.movement = [0.0, 0.0]
         self.y_momentum = 0.0
+        self.flip = False
         self.is_on_ground = False
 
     def update(self, world, dt):
@@ -124,28 +125,33 @@ class MovableObject:
         self.movement[1] += self.y_momentum
 
         # X
-        if self.movement[0] != 0:
+        if self.movement[0] != 0.0:
+            if self.movement[0] > 0.0:
+                self.flip = False
+            else:
+                self.flip = True
+
             self.position[0] += self.movement[0] * dt
             tile_rect = self.collide(world)
             if tile_rect:
-                if self.movement[0] > 0:
+                if self.movement[0] > 0.0:
                     self.position[0] = tile_rect.left - self.size[0]
                 else:
                     self.position[0] = tile_rect.right
-            self.movement[0] = 0
+            self.movement[0] = 0.0
 
         # Y
-        if self.movement[1] != 0:
+        if self.movement[1] != 0.0:
             self.position[1] += self.movement[1] * dt
             tile_rect = self.collide(world)
             if tile_rect:
-                if self.movement[1] > 0:
+                if self.movement[1] > 0.0:
                     self.position[1] = tile_rect.top - self.size[1]
                     self.is_on_ground = True
                 else:
                     self.position[1] = tile_rect.bottom
-                self.y_momentum = 0
-            self.movement[1] = 0
+                self.y_momentum = 0.0
+            self.movement[1] = 0.0
 
     def collide(self, world):
         rect = self.get_rect()
@@ -169,10 +175,13 @@ class MovableObject:
     def draw_with_image(self, surface, camera_pos, image):
         rect = self.get_rect()
         rect.topleft = world_to_screen(rect.topleft, camera_pos)
+        if self.flip:
+            image = pygame.transform.flip(image, True, False)
         surface.blit(image, rect)
 
     def get_rect(self):
-        return pygame.Rect(self.position[0], self.position[1], self.size[0], self.size[1])
+        # Ceil the position so as to avoid undetected collision on the ground
+        return pygame.Rect(ceil(self.position[0]), ceil(self.position[1]), self.size[0], self.size[1])
 
     def move(self, m):
         self.movement[0] += m[0]
@@ -247,6 +256,10 @@ class AnimatableObject(MovableObject):
         self.active_animation = self.animations[name]
         self.time_since_anim_start = 0.0
 
+    def ensure_animation(self, name):
+        if self.active_animation != self.animations[name]:
+            self.play_animation(name)
+
 def play_game(screen):
     # World
     world = World()
@@ -276,6 +289,20 @@ def play_game(screen):
             player.move([-PLAYER_SPEED, 0])
         if keys[pygame.K_d]:
             player.move([PLAYER_SPEED, 0])
+
+        # Animations
+
+        # Player
+        if abs(player.y_momentum) < 1.0:
+            if player.movement[0] == 0:
+                player.ensure_animation("idle")
+            else:
+                player.ensure_animation("walk")
+        else:
+            if player.y_momentum > 0:
+                player.ensure_animation("fall")
+            else:
+                player.ensure_animation("jump")
 
         # Update
         world.update(camera_pos)
