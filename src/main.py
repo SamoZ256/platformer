@@ -17,6 +17,8 @@ BLUE = (0, 0, 255)
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 
+
+
 def world_to_screen(pos, camera_pos):
     return (pos[0] - camera_pos[0] + SCREEN_WIDTH / 2, pos[1] - camera_pos[1] + SCREEN_HEIGHT / 2)
 
@@ -187,51 +189,51 @@ class MovableObject:
 
 pygame.init()
 
-# Set the height and width of the screen
-size = [SCREEN_WIDTH, SCREEN_HEIGHT]
-screen = pygame.display.set_mode(size)
+def play_game():
+    # Set the height and width of the screen
+    size = [SCREEN_WIDTH, SCREEN_HEIGHT]
+    screen = pygame.display.set_mode(size)
+    pygame.display.set_caption("Side-scrolling Platformer")
 
-pygame.display.set_caption("Side-scrolling Platformer")
+    # World
+    world = World()
 
-# World
-world = World()
+    # Player
+    player = MovableObject()
+    player.position = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2 - 100]
 
-# Player
-player = MovableObject()
-player.position = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2 - 100]
+    clock = pygame.time.Clock()
 
-clock = pygame.time.Clock()
+    camera_pos = (0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2)
 
-camera_pos = (0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2)
+    # -------- Main Program Loop -----------
+    done = False
+    while not done:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                done = True
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    player.try_jump(PLAYER_JUMP_HEIGHT)
 
-# -------- Main Program Loop -----------
-done = False
-while not done:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            done = True
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE:
-                player.try_jump(PLAYER_JUMP_HEIGHT)
+        dt = clock.tick(60) / 1000
 
-    dt = clock.tick(60) / 1000
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_a]:
+            player.move([-PLAYER_SPEED, 0])
+        if keys[pygame.K_d]:
+            player.move([PLAYER_SPEED, 0])
 
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_a]:
-        player.move([-PLAYER_SPEED, 0])
-    if keys[pygame.K_d]:
-        player.move([PLAYER_SPEED, 0])
+        # Update
+        world.update(camera_pos)
+        player.update(world, dt)
 
-    # Update
-    world.update(camera_pos)
-    player.update(world, dt)
+        # Draw
+        screen.fill((0, 0, 0))
 
-    # Draw
-    screen.fill((0, 0, 0))
+        world.draw(screen, camera_pos)
+        player.draw(screen, camera_pos)
 
-    world.draw(screen, camera_pos)
-    player.draw(screen, camera_pos)
+        pygame.display.flip()
 
-    pygame.display.flip()
-
-pygame.quit()
+    pygame.quit()
