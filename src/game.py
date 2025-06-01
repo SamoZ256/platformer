@@ -1,5 +1,7 @@
 from math import *
 
+import os
+import json
 import pygame
 
 from constants import *
@@ -109,10 +111,8 @@ class World:
         self.chunk_manager.draw(surface, camera_pos)
 
 class MovableObject:
-    def __init__(self):
-        self.size = (40, 60) # TODO: don't hardcode
-        self.image = pygame.Surface(self.size)
-        self.image.fill(RED)
+    def __init__(self, size):
+        self.size = size
 
         self.position = [0.0, 0.0]
         self.movement = [0.0, 0.0]
@@ -166,10 +166,10 @@ class MovableObject:
 
         return None
 
-    def draw(self, surface, camera_pos):
+    def draw_with_image(self, surface, camera_pos, image):
         rect = self.get_rect()
         rect.topleft = world_to_screen(rect.topleft, camera_pos)
-        surface.blit(self.image, rect)
+        surface.blit(image, rect)
 
     def get_rect(self):
         return pygame.Rect(self.position[0], self.position[1], self.size[0], self.size[1])
@@ -183,13 +183,78 @@ class MovableObject:
             self.y_momentum = -height
             self.is_on_ground = False
 
+IMAGE_SCALE = 2
+
+class Animation:
+    def __init__(self, filename):
+        with open(filename + "/rules.json") as file:
+            rules = json.load(file)
+
+            self.frames = rules["frames"]
+            self.speed = rules["speed"]
+            self.loop = rules["loop"]
+
+            count = 0
+            for entry in os.scandir(filename):
+                if entry.path.split(".")[1] == "png":
+                    count += 1
+
+            self.images = [None] * count
+            for entry in os.scandir(filename):
+                base_name = os.path.basename(entry.path)
+                (name, ext) = base_name.split(".")
+                if ext == "png":
+                    image = pygame.image.load(entry.path)
+                    size = [image.get_width() * IMAGE_SCALE, image.get_height() * IMAGE_SCALE]
+                    image = pygame.transform.scale(image, size)
+                    self.images[int(name)] = image
+
+    def get_size(self):
+        return [self.images[0].get_width(), self.images[0].get_height()]
+
+class AnimatableObject(MovableObject):
+    def __init__(self, filename):
+        self.animations = {}
+        size = [0, 0]
+        for entry in os.scandir(filename):
+            base_name = os.path.basename(entry.path)
+            if base_name == ".DS_Store":
+                continue
+
+            anim = Animation(entry.path)
+            self.animations[base_name] = anim
+            size = anim.get_size()
+
+        self.active_animation = None
+        self.time_since_anim_start = 0.0
+
+        super().__init__(size)
+
+    def update(self, world, dt):
+        super().update(world, dt)
+        self.time_since_anim_start += dt
+
+    def draw(self, surface, camera_pos):
+        anim = self.active_animation
+        frame = floor(self.time_since_anim_start / anim.speed)
+        if anim.loop:
+            frame %= len(anim.images) # Loop
+        else:
+            frame = min(frame, len(anim.images) - 1) # Cap
+        self.draw_with_image(surface, camera_pos, anim.images[anim.frames[frame]])
+
+    def play_animation(self, name):
+        self.active_animation = self.animations[name]
+        self.time_since_anim_start = 0.0
+
 def play_game(screen):
     # World
     world = World()
 
     # Player
-    player = MovableObject()
+    player = AnimatableObject("assets/super_mango/player")
     player.position = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2 - 100]
+    player.play_animation("idle")
 
     clock = pygame.time.Clock()
 
