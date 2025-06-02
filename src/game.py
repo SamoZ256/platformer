@@ -151,7 +151,7 @@ class ChunkManager:
         return (begin, end)
 
     def get_visible_chunk_range(self, camera_pos):
-        return self.get_chunk_range(camera_pos[0] - SCREEN_WIDTH / 2, camera_pos[1] + SCREEN_WIDTH / 2)
+        return self.get_chunk_range(camera_pos[0] - SCREEN_WIDTH / 2, camera_pos[0] + SCREEN_WIDTH / 2)
 
 class World:
     def __init__(self, map_filename):
