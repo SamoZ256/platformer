@@ -330,10 +330,23 @@ class Player(AnimatableObject):
     def update_player(self, world, dt):
         super().update(world, dt)
 
+BACKGROUND_SCROLL = 0.2
+
+class Background:
+    def __init__(self, filename):
+        self.image = load_image_scaled(filename)
+
+    def draw(self, surface, camera_pos):
+        pos = (camera_pos[0] * BACKGROUND_SCROLL, 0)
+        surface.blit(self.image, pos)
+
 
 def play_game(screen):
     # World
     world = World("assets/maps/1.txt")
+
+    # Background
+    background = Background("assets/super_mango/Forest_Background_0.png")
 
     # Player
     player = Player("assets/super_mango/player")
@@ -387,8 +400,7 @@ def play_game(screen):
                 coin.collected = True
                 player.collect_count += 1
         # Draw
-        screen.fill((0, 0, 0))
-
+        background.draw(screen, camera_pos)
         world.draw(screen, camera_pos)
         player.draw(screen, camera_pos)
         # draw coin
