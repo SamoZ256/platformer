@@ -28,6 +28,13 @@ PLAYER_JUMP_HEIGHT = 800
 IMAGE_SCALE = 3
 NONE_TILE = 0
 
+def load_image_scaled(filename):
+    image = pygame.image.load(filename).convert_alpha()
+    size = [image.get_width() * IMAGE_SCALE, image.get_height() * IMAGE_SCALE]
+    image = pygame.transform.scale(image, size)
+
+    return image
+
 class Tileset:
     def __init__(self, filename):
         count = 0
@@ -40,10 +47,7 @@ class Tileset:
             base_name = os.path.basename(entry.path)
             (name, ext) = base_name.split(".")
             if ext == "png":
-                image = pygame.image.load(entry.path)
-                size = [image.get_width() * IMAGE_SCALE, image.get_height() * IMAGE_SCALE]
-                image = pygame.transform.scale(image, size)
-                self.images[int(name)] = image
+                self.images[int(name)] = load_image_scaled(entry.path)
 
     def get_image(self, tile):
         return self.images[tile]
@@ -164,7 +168,7 @@ class Collectible:
     def __init__(self, pos, image_path):
         self.pos = pos
         self.collected = False
-        self.image = pygame.image.load(image_path).convert_alpha()
+        self.image = load_image_scaled(image_path)
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.image.get_width(), self.image.get_height())
 
     def draw(self, surface, camera_pos):
@@ -274,10 +278,7 @@ class Animation:
                 base_name = os.path.basename(entry.path)
                 (name, ext) = base_name.split(".")
                 if ext == "png":
-                    image = pygame.image.load(entry.path)
-                    size = [image.get_width() * IMAGE_SCALE, image.get_height() * IMAGE_SCALE]
-                    image = pygame.transform.scale(image, size)
-                    self.images[int(name)] = image
+                    self.images[int(name)] = load_image_scaled(entry.path)
 
     def get_size(self):
         return [self.images[0].get_width(), self.images[0].get_height()]
@@ -345,7 +346,7 @@ def play_game(screen):
     # coin
 
     coins = []
-    coins.append(Collectible((100,800,16,16), "assets/super_mango/coin.png"))
+    coins.append(Collectible((100, 1200), "assets/super_mango/coin.png"))
     # -------- Main Program Loop -----------
     while True:
         for event in pygame.event.get():
