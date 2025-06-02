@@ -40,7 +40,7 @@ class Menu:
                     return
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
-                        play_game(self.screen)
+                        play_game(self.screen, 1)
                         return
                     if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
                         return

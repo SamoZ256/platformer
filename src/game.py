@@ -353,9 +353,12 @@ class Background:
         surface.blit(self.image, (pos_x, 0))
         surface.blit(self.image, (pos_x, self.image.get_height()))
 
-def play_game(screen):
+CAMERA_DIFF_LIMIT = SCREEN_WIDTH / 15
+CAMERA_OFFSET = -SCREEN_WIDTH / 8
+
+def play_game(screen, map_number):
     # World
-    world = World("assets/maps/1.txt")
+    world = World(f"assets/maps/{map_number}.txt")
 
     # Background
     background = Background("assets/super_mango/Forest_Background_0.png")
@@ -367,7 +370,7 @@ def play_game(screen):
 
     clock = pygame.time.Clock()
 
-    camera_pos = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
+    camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
     # coin
 
     coins = []
@@ -382,7 +385,8 @@ def play_game(screen):
                 if event.key == pygame.K_SPACE:
                     player.try_jump(PLAYER_JUMP_HEIGHT)
 
-        dt = clock.tick(60) / 1000
+        dt = clock.tick(60) / 1000.0
+        dt = min(dt, 0.033) # Limit delta time to 33 milliseconds
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_a]:
@@ -394,7 +398,7 @@ def play_game(screen):
 
         # Player
         if abs(player.momentum[1]) < 1.0:
-            if player.momentum[0] == 0.0:
+            if abs(player.momentum[0]) < 10.0:
                 player.ensure_animation("idle")
             else:
                 player.ensure_animation("walk")
@@ -405,10 +409,21 @@ def play_game(screen):
                 player.ensure_animation("jump")
 
         # Update
+
+        # Player
         player.update(world, dt)
-        camera_pos[0] = player.position[0] + player.size[0] / 2 # TODO: make this better
+
+        # Camera
+        player_center_x = player.position[0] + player.size[0] / 2
+        camera_follow_x = player_center_x - CAMERA_OFFSET
+        camera_diff_x = camera_follow_x - camera_pos[0]
+        if abs(camera_diff_x) > CAMERA_DIFF_LIMIT: # If player has moved too far away from the camera
+            camera_pos[0] = camera_follow_x + (-CAMERA_DIFF_LIMIT if camera_diff_x > 0.0 else CAMERA_DIFF_LIMIT)
+
+        # World
         world.update(camera_pos)
-        # After player update, before drawing:
+
+        # Coins
         for coin in coins:
             if not coin.collected and player.get_rect().colliderect(coin.rect):
                 coin.collected = True
