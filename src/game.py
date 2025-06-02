@@ -339,12 +339,15 @@ class Background:
     def draw(self, surface, camera_pos):
         pos_x = -camera_pos[0] * BACKGROUND_SCROLL
         pos_x = pos_x % self.image.get_width()
-        surface.blit(self.image, (pos_x, 0))
+        self.draw_impl(surface, pos_x)
         if pos_x > 0.0:
-            surface.blit(self.image, (pos_x - self.image.get_width(), 0))
+            self.draw_impl(surface, pos_x - self.image.get_width())
         else:
-            surface.blit(self.image, (pos_x + self.image.get_width(), 0))
+            self.draw_impl(surface, pos_x + self.image.get_width())
 
+    def draw_impl(self, surface, pos_x):
+        surface.blit(self.image, (pos_x, 0))
+        surface.blit(self.image, (pos_x, self.image.get_height()))
 
 def play_game(screen):
     # World
@@ -360,11 +363,12 @@ def play_game(screen):
 
     clock = pygame.time.Clock()
 
-    camera_pos = (0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2)
+    camera_pos = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
     # coin
 
     coins = []
     coins.append(Collectible((100, 1200), "assets/super_mango/coin.png"))
+
     # -------- Main Program Loop -----------
     while True:
         for event in pygame.event.get():
@@ -404,6 +408,10 @@ def play_game(screen):
             if not coin.collected and player.get_rect().colliderect(coin.rect):
                 coin.collected = True
                 player.collect_count += 1
+
+        # Camera
+        camera_pos[0] = player.position[0] + player.size[0] / 2 # TODO: make this better
+
         # Draw
         background.draw(screen, camera_pos)
         world.draw(screen, camera_pos)
