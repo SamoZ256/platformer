@@ -21,8 +21,9 @@ BLUE = (0, 0, 255)
 def world_to_screen(pos, camera_pos):
     return (pos[0] - camera_pos[0] + SCREEN_WIDTH / 2, pos[1] - camera_pos[1] + SCREEN_HEIGHT / 2)
 
+FRICTION = 0.07
 GRAVITY = 2500
-PLAYER_SPEED = 300
+PLAYER_SPEED = 1800
 PLAYER_JUMP_HEIGHT = 800
 
 IMAGE_SCALE = 3
@@ -64,11 +65,11 @@ class Map:
                 self.tiles.append(tile_row)
 
     def get_tile(self, x, y):
-        if y >= len(self.tiles):
+        if y < 0 or y >= len(self.tiles):
             return NONE_TILE
 
         tile_row = self.tiles[y]
-        if x >= len(tile_row):
+        if x < 0 or x >= len(tile_row):
             return NONE_TILE
 
         return tile_row[x]
@@ -182,43 +183,47 @@ class MovableObject:
         self.size = size
 
         self.position = [0.0, 0.0]
-        self.movement = [0.0, 0.0]
-        self.y_momentum = 0.0
+        self.momentum = [0.0, 0.0]
         self.flip = False
         self.is_on_ground = False
 
     def update(self, world, dt):
-        self.y_momentum += GRAVITY * dt
-        self.movement[1] += self.y_momentum
+        # Friction
+        self.momentum[0] *= 1.0 - FRICTION # TODO: better
+        if abs(self.momentum[0]) < 2.0:
+            self.momentum[0] = 0.0
+
+        # Gravity
+        self.momentum[1] += GRAVITY * dt
 
         # X
-        if self.movement[0] != 0.0:
-            if self.movement[0] > 0.0:
+        if self.momentum[0] != 0.0:
+            if self.momentum[0] > 0.0:
                 self.flip = False
             else:
                 self.flip = True
 
-            self.position[0] += self.movement[0] * dt
+            self.position[0] += self.momentum[0] * dt
             tile_rect = self.collide(world)
             if tile_rect:
-                if self.movement[0] > 0.0:
+                if self.momentum[0] > 0.0:
                     self.position[0] = tile_rect.left - self.size[0]
                 else:
                     self.position[0] = tile_rect.right
-            self.movement[0] = 0.0
+                self.momentum[0] = 0.0
 
         # Y
-        if self.movement[1] != 0.0:
-            self.position[1] += self.movement[1] * dt
+        if self.momentum[1] != 0.0:
+            self.is_on_ground = False
+            self.position[1] += self.momentum[1] * dt
             tile_rect = self.collide(world)
             if tile_rect:
-                if self.movement[1] > 0.0:
+                if self.momentum[1] > 0.0:
                     self.position[1] = tile_rect.top - self.size[1]
                     self.is_on_ground = True
                 else:
                     self.position[1] = tile_rect.bottom
-                self.y_momentum = 0.0
-            self.movement[1] = 0.0
+                self.momentum[1] = 0.0
 
     def collide(self, world):
         rect = self.get_rect()
@@ -248,16 +253,15 @@ class MovableObject:
 
     def get_rect(self):
         # Ceil the position so as to avoid undetected collision on the ground
-        return pygame.Rect(ceil(self.position[0]), ceil(self.position[1]), self.size[0], self.size[1])
+        return pygame.Rect(self.position[0], ceil(self.position[1]), self.size[0], self.size[1])
 
-    def move(self, m):
-        self.movement[0] += m[0]
-        self.movement[1] += m[1]
+    def move(self, movement):
+        self.momentum[0] += movement[0]
+        self.momentum[1] += movement[1]
 
     def try_jump(self, height):
         if self.is_on_ground:
-            self.y_momentum = -height
-            self.is_on_ground = False
+            self.momentum[1] = -height
 
 class Animation:
     def __init__(self, filename):
@@ -382,35 +386,33 @@ def play_game(screen):
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_a]:
-            player.move([-PLAYER_SPEED, 0])
+            player.move([-PLAYER_SPEED * dt, 0])
         if keys[pygame.K_d]:
-            player.move([PLAYER_SPEED, 0])
+            player.move([PLAYER_SPEED * dt, 0])
 
         # Animations
 
         # Player
-        if abs(player.y_momentum) < 1.0:
-            if player.movement[0] == 0:
+        if abs(player.momentum[1]) < 1.0:
+            if player.momentum[0] == 0.0:
                 player.ensure_animation("idle")
             else:
                 player.ensure_animation("walk")
         else:
-            if player.y_momentum > 0:
+            if player.momentum[1] > 0:
                 player.ensure_animation("fall")
             else:
                 player.ensure_animation("jump")
 
         # Update
-        world.update(camera_pos)
         player.update(world, dt)
+        camera_pos[0] = player.position[0] + player.size[0] / 2 # TODO: make this better
+        world.update(camera_pos)
         # After player update, before drawing:
         for coin in coins:
             if not coin.collected and player.get_rect().colliderect(coin.rect):
                 coin.collected = True
                 player.collect_count += 1
-
-        # Camera
-        camera_pos[0] = player.position[0] + player.size[0] / 2 # TODO: make this better
 
         # Draw
         background.draw(screen, camera_pos)
@@ -423,9 +425,5 @@ def play_game(screen):
         font = pygame.font.Font("assets/Minecraft.ttf", 36)
         text = font.render(f"Collected: {player.collect_count}", True, (255, 255, 0))
         screen.blit(text, (20, 20))
-
-        #draw platforms
-
-
 
         pygame.display.flip()
