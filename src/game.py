@@ -137,19 +137,16 @@ class World:
 
 class Collectible:
     def __init__(self, pos, image_path):
-        self.pos = pos  # [x, y]
+        self.pos = pos
         self.collected = False
-        self.image = pygame.image.load(image_path)
+        self.image = pygame.image.load(image_path).convert_alpha()
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.image.get_width(), self.image.get_height())
 
     def draw(self, surface, camera_pos):
         if not self.collected:
-            screen_pos = (self.pos[0] - camera_pos[0] + surface.get_width() // 2,
-                          self.pos[1] - camera_pos[1] + surface.get_height() // 2)
+            screen_pos = world_to_screen(self.pos, camera_pos)
             surface.blit(self.image, screen_pos)
 
-    def check_collision(self, player_rect):
-        return not self.collected and self.rect.colliderect(player_rect)
 
 class MovableObject:
     def __init__(self, size):
@@ -322,7 +319,10 @@ def play_game(screen):
     clock = pygame.time.Clock()
 
     camera_pos = (0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2)
+    # coin
 
+    coins = []
+    coins.append(Collectible((100,800,16,16), "assets/super_mango/coin.png"))
     # -------- Main Program Loop -----------
     while True:
         for event in pygame.event.get():
@@ -357,16 +357,26 @@ def play_game(screen):
         # Update
         world.update(camera_pos)
         player.update(world, dt)
-
+        # After player update, before drawing:
+        for coin in coins:
+            if not coin.collected and player.get_rect().colliderect(coin.rect):
+                coin.collected = True
+                player.collect_count += 1
         # Draw
         screen.fill((0, 0, 0))
 
         world.draw(screen, camera_pos)
         player.draw(screen, camera_pos)
-        # draw collectables
+        # draw coin
+        for coin in coins:
+            coin.draw(screen, camera_pos)
+        # draw collectables count
         font = pygame.font.Font("assets/Minecraft.ttf", 36)
         text = font.render(f"Collected: {player.collect_count}", True, (255, 255, 0))
-
         screen.blit(text, (20, 20))
+
+        #draw platforms
+
+
 
         pygame.display.flip()
