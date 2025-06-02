@@ -332,7 +332,7 @@ class Player(AnimatableObject):
         super().__init__(filename, GRAVITY)
         self.collect_count = 0  # Track collected items
 
-BIRD_SPEED = 500
+BIRD_SPEED = 400
 BIRD_DIR_SWAP_TIME = 3.0
 
 class Bird(AnimatableObject):
@@ -353,6 +353,25 @@ class Bird(AnimatableObject):
             self.going_left = not self.going_left
 
         super().update(world, dt)
+
+SPIDER_SPEED = 600
+
+class Spider(AnimatableObject):
+    def __init__(self):
+        super().__init__("assets/super_mango/spider", GRAVITY)
+        self.going_left = True
+        self.play_animation("walk")
+
+    def update(self, world, dt):
+        if self.going_left:
+            self.move([-SPIDER_SPEED * dt, 0])
+        else:
+            self.move([SPIDER_SPEED * dt, 0])
+
+        super().update(world, dt)
+
+        if self.momentum[0] == 0.0: # Bumped into a wall
+            self.going_left = not self.going_left
 
 BACKGROUND_SCROLL = 0.2
 
@@ -400,6 +419,12 @@ def play_game(screen, map_number):
     bird.position = [600, 1000]
     birds.append(bird)
 
+    # Spiders
+    spiders = []
+    spider = Spider()
+    spider.position = [600, 1000]
+    spiders.append(spider)
+
     clock = pygame.time.Clock()
 
     # -------- Main Program Loop -----------
@@ -436,8 +461,12 @@ def play_game(screen, map_number):
 
         # Update
 
-        # Player
+        # Sprites
         player.update(world, dt)
+        for bird in birds:
+            bird.update(world, dt)
+        for spider in spiders:
+            spider.update(world, dt)
 
         # Camera
         player_center_x = player.position[0] + player.size[0] / 2
@@ -445,10 +474,6 @@ def play_game(screen, map_number):
         camera_diff_x = camera_follow_x - camera_pos[0]
         if abs(camera_diff_x) > CAMERA_DIFF_LIMIT: # If player has moved too far away from the camera
             camera_pos[0] = camera_follow_x + (-CAMERA_DIFF_LIMIT if camera_diff_x > 0.0 else CAMERA_DIFF_LIMIT)
-
-        # Birds
-        for bird in birds:
-            bird.update(world, dt)
 
         # World
         world.update(camera_pos)
@@ -468,11 +493,13 @@ def play_game(screen, map_number):
         world.draw(screen, camera_pos)
 
         # Sprites
-        player.draw(screen, camera_pos)
         for bird in birds:
             bird.draw(screen, camera_pos)
+        for spider in spiders:
+            spider.draw(screen, camera_pos)
         for coin in coins:
             coin.draw(screen, camera_pos)
+        player.draw(screen, camera_pos)
 
         # HUD
         font = pygame.font.Font("assets/Minecraft.ttf", 36)
