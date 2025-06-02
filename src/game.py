@@ -179,8 +179,9 @@ class Collectible:
 
 
 class MovableObject:
-    def __init__(self, size):
+    def __init__(self, size, gravity):
         self.size = size
+        self.gravity = gravity
 
         self.position = [0.0, 0.0]
         self.momentum = [0.0, 0.0]
@@ -194,7 +195,7 @@ class MovableObject:
             self.momentum[0] = 0.0
 
         # Gravity
-        self.momentum[1] += GRAVITY * dt
+        self.momentum[1] += self.gravity * dt
 
         # X
         if self.momentum[0] != 0.0:
@@ -288,7 +289,7 @@ class Animation:
         return [self.images[0].get_width(), self.images[0].get_height()]
 
 class AnimatableObject(MovableObject):
-    def __init__(self, filename):
+    def __init__(self, filename, gravity):
         self.animations = {}
         size = [0, 0]
         for entry in os.scandir(filename):
@@ -303,7 +304,7 @@ class AnimatableObject(MovableObject):
         self.active_animation = None
         self.time_since_anim_start = 0.0
 
-        super().__init__(size)
+        super().__init__(size, gravity)
 
     def update(self, world, dt):
         super().update(world, dt)
@@ -328,10 +329,29 @@ class AnimatableObject(MovableObject):
 
 class Player(AnimatableObject):
     def __init__(self, filename):
-        super().__init__(filename)
+        super().__init__(filename, GRAVITY)
         self.collect_count = 0  # Track collected items
 
-    def update_player(self, world, dt):
+BIRD_SPEED = 500
+BIRD_DIR_SWAP_TIME = 3.0
+
+class Bird(AnimatableObject):
+    def __init__(self):
+        super().__init__("assets/super_mango/bird", 0.0)
+        self.timer = 0.0
+        self.going_left = True
+        self.play_animation("fly")
+
+    def update(self, world, dt):
+        if self.going_left:
+            self.move([-BIRD_SPEED * dt, 0])
+        else:
+            self.move([BIRD_SPEED * dt, 0])
+        self.timer += dt
+        if self.timer > BIRD_DIR_SWAP_TIME:
+            self.timer = 0.0
+            self.going_left = not self.going_left
+
         super().update(world, dt)
 
 BACKGROUND_SCROLL = 0.2
@@ -368,13 +388,19 @@ def play_game(screen, map_number):
     player.position = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2 - 100]
     player.play_animation("idle")
 
-    clock = pygame.time.Clock()
-
     camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
-    # coin
 
+    # Coins
     coins = []
     coins.append(Collectible((100, 1200), "assets/super_mango/coin.png"))
+
+    # Birds
+    birds = []
+    bird = Bird()
+    bird.position = [600, 1000]
+    birds.append(bird)
+
+    clock = pygame.time.Clock()
 
     # -------- Main Program Loop -----------
     while True:
@@ -420,6 +446,10 @@ def play_game(screen, map_number):
         if abs(camera_diff_x) > CAMERA_DIFF_LIMIT: # If player has moved too far away from the camera
             camera_pos[0] = camera_follow_x + (-CAMERA_DIFF_LIMIT if camera_diff_x > 0.0 else CAMERA_DIFF_LIMIT)
 
+        # Birds
+        for bird in birds:
+            bird.update(world, dt)
+
         # World
         world.update(camera_pos)
 
@@ -430,13 +460,21 @@ def play_game(screen, map_number):
                 player.collect_count += 1
 
         # Draw
+
+        # Background
         background.draw(screen, camera_pos)
+
+        # World
         world.draw(screen, camera_pos)
+
+        # Sprites
         player.draw(screen, camera_pos)
-        # draw coin
+        for bird in birds:
+            bird.draw(screen, camera_pos)
         for coin in coins:
             coin.draw(screen, camera_pos)
-        # draw collectables count
+
+        # HUD
         font = pygame.font.Font("assets/Minecraft.ttf", 36)
         text = font.render(f"Collected: {player.collect_count}", True, (255, 255, 0))
         screen.blit(text, (20, 20))
