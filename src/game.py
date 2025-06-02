@@ -337,8 +337,13 @@ class Background:
         self.image = load_image_scaled(filename)
 
     def draw(self, surface, camera_pos):
-        pos = (camera_pos[0] * BACKGROUND_SCROLL, 0)
-        surface.blit(self.image, pos)
+        pos_x = -camera_pos[0] * BACKGROUND_SCROLL
+        pos_x = pos_x % self.image.get_width()
+        surface.blit(self.image, (pos_x, 0))
+        if pos_x > 0.0:
+            surface.blit(self.image, (pos_x - self.image.get_width(), 0))
+        else:
+            surface.blit(self.image, (pos_x + self.image.get_width(), 0))
 
 
 def play_game(screen):
