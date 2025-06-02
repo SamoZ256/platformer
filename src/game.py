@@ -21,9 +21,12 @@ BLUE = (0, 0, 255)
 def world_to_screen(pos, camera_pos):
     return (pos[0] - camera_pos[0] + SCREEN_WIDTH / 2, pos[1] - camera_pos[1] + SCREEN_HEIGHT / 2)
 
-GRAVITY = 2000
-PLAYER_SPEED = 200
-PLAYER_JUMP_HEIGHT = 500
+GRAVITY = 2500
+PLAYER_SPEED = 300
+PLAYER_JUMP_HEIGHT = 800
+
+IMAGE_SCALE = 3
+NONE_TILE = 0
 
 class Tileset:
     def __init__(self, filename):
@@ -45,24 +48,44 @@ class Tileset:
     def get_image(self, tile):
         return self.images[tile]
 
-TILE_SIZE = 32
+class Map:
+    def __init__(self, filename):
+        self.tiles = []
+        with open(filename) as file:
+            for line in file.readlines():
+                line = line.strip()
+                tile_row = [None] * len(line)
+                for i in range(len(line)):
+                    tile_row[i] = int(line[i])
+                self.tiles.append(tile_row)
+
+    def get_tile(self, x, y):
+        if y >= len(self.tiles):
+            return NONE_TILE
+
+        tile_row = self.tiles[y]
+        if x >= len(tile_row):
+            return NONE_TILE
+
+        return tile_row[x]
+
+TILE_SIZE = 16 * IMAGE_SCALE
 CHUNK_WIDTH = 8
 CHUNK_HEIGHT = 32
 
 class Chunk:
-    def __init__(self, x):
+    def __init__(self, x, map):
         self.x = x
 
         self.tiles = [0] * CHUNK_WIDTH * CHUNK_HEIGHT
-        self.generate()
+        self.load(map)
 
-    def generate(self):
-        for x in range(CHUNK_WIDTH):
-            for y in range(CHUNK_HEIGHT):
-                if y > CHUNK_HEIGHT - 6:
-                    self.set_tile(x, y, 5)
-                elif y == CHUNK_HEIGHT - 6:
-                    self.set_tile(x, y, 2)
+    def load(self, map):
+        for tile_x in range(CHUNK_WIDTH):
+            for tile_y in range(CHUNK_HEIGHT):
+                x = self.x * CHUNK_WIDTH + tile_x
+                tile = map.get_tile(x, tile_y)
+                self.set_tile(tile_x, tile_y, tile)
 
     def get_tile(self, rel_tile_x, rel_tile_y):
         return self.tiles[rel_tile_y * CHUNK_WIDTH + rel_tile_x]
@@ -93,7 +116,8 @@ class Chunk:
         return (begin, end)
 
 class ChunkManager:
-    def __init__(self):
+    def __init__(self, map):
+        self.map = map
         self.tileset = Tileset("assets/super_mango/tileset")
         self.chunks = {}
 
@@ -110,7 +134,7 @@ class ChunkManager:
 
     def ensure_chunk(self, chunk_x):
         if not chunk_x in self.chunks:
-            self.chunks[chunk_x] = Chunk(chunk_x)
+            self.chunks[chunk_x] = Chunk(chunk_x, self.map)
 
     def get_chunk(self, chunk_x):
         self.ensure_chunk(chunk_x)
@@ -125,8 +149,9 @@ class ChunkManager:
         return self.get_chunk_range(camera_pos[0] - SCREEN_WIDTH / 2, camera_pos[1] + SCREEN_WIDTH / 2)
 
 class World:
-    def __init__(self):
-        self.chunk_manager = ChunkManager()
+    def __init__(self, map_filename):
+        self.map = Map(map_filename)
+        self.chunk_manager = ChunkManager(self.map)
 
     def update(self, camera_pos):
         self.chunk_manager.update(camera_pos)
@@ -230,8 +255,6 @@ class MovableObject:
             self.y_momentum = -height
             self.is_on_ground = False
 
-IMAGE_SCALE = 2
-
 class Animation:
     def __init__(self, filename):
         with open(filename + "/rules.json") as file:
@@ -309,7 +332,7 @@ class Player(AnimatableObject):
 
 def play_game(screen):
     # World
-    world = World()
+    world = World("assets/maps/1.txt")
 
     # Player
     player = Player("assets/super_mango/player")
