@@ -25,6 +25,26 @@ GRAVITY = 2000
 PLAYER_SPEED = 200
 PLAYER_JUMP_HEIGHT = 500
 
+class Tileset:
+    def __init__(self, filename):
+        count = 0
+        for entry in os.scandir(filename):
+            if entry.path.split(".")[1] == "png":
+                count += 1
+
+        self.images = [None] * (count + 1) # + 1 because of the empty image number 0
+        for entry in os.scandir(filename):
+            base_name = os.path.basename(entry.path)
+            (name, ext) = base_name.split(".")
+            if ext == "png":
+                image = pygame.image.load(entry.path)
+                size = [image.get_width() * IMAGE_SCALE, image.get_height() * IMAGE_SCALE]
+                image = pygame.transform.scale(image, size)
+                self.images[int(name)] = image
+
+    def get_image(self, tile):
+        return self.images[tile]
+
 TILE_SIZE = 32
 CHUNK_WIDTH = 8
 CHUNK_HEIGHT = 32
@@ -39,8 +59,10 @@ class Chunk:
     def generate(self):
         for x in range(CHUNK_WIDTH):
             for y in range(CHUNK_HEIGHT):
-                if y > CHUNK_HEIGHT - 7:
-                    self.set_tile(x, y, 1)
+                if y > CHUNK_HEIGHT - 6:
+                    self.set_tile(x, y, 5)
+                elif y == CHUNK_HEIGHT - 6:
+                    self.set_tile(x, y, 2)
 
     def get_tile(self, rel_tile_x, rel_tile_y):
         return self.tiles[rel_tile_y * CHUNK_WIDTH + rel_tile_x]
@@ -48,14 +70,14 @@ class Chunk:
     def set_tile(self, rel_tile_x, rel_tile_y, tile):
         self.tiles[rel_tile_y * CHUNK_WIDTH + rel_tile_x] = tile
 
-    def draw(self, surface, camera_pos):
+    def draw_with_tileset(self, surface, camera_pos, tileset):
         for x in range(CHUNK_WIDTH):
             for y in range(CHUNK_HEIGHT):
                 tile = self.get_tile(x, y)
                 if tile != 0:
                     rect = self.get_tile_rect(x, y)
                     rect.topleft = world_to_screen(rect.topleft, camera_pos)
-                    pygame.draw.rect(surface, GREEN, rect)
+                    surface.blit(tileset.get_image(tile), rect.topleft)
 
     def get_tile_rect(self, tile_x, tile_y):
         return pygame.Rect((self.x * CHUNK_WIDTH + tile_x) * TILE_SIZE, tile_y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
@@ -72,6 +94,7 @@ class Chunk:
 
 class ChunkManager:
     def __init__(self):
+        self.tileset = Tileset("assets/super_mango/tileset")
         self.chunks = {}
 
     def update(self, camera_pos):
@@ -83,7 +106,7 @@ class ChunkManager:
         visible = self.get_visible_chunk_range(camera_pos)
         for chunk_x in range(visible[0], visible[1]):
             chunk = self.chunks[chunk_x]
-            chunk.draw(surface, camera_pos)
+            chunk.draw_with_tileset(surface, camera_pos, self.tileset)
 
     def ensure_chunk(self, chunk_x):
         if not chunk_x in self.chunks:
