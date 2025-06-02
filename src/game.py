@@ -166,10 +166,10 @@ class World:
 
 
 class Collectible:
-    def __init__(self, pos, image_path):
+    def __init__(self, pos, image):
         self.pos = pos
         self.collected = False
-        self.image = load_image_scaled(image_path)
+        self.image = image
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.image.get_width(), self.image.get_height())
 
     def draw(self, surface, camera_pos):
@@ -391,8 +391,13 @@ def play_game(screen, map_number):
     camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
 
     # Coins
+    coin_image= load_image_scaled("assets/super_mango/coin.png")
     coins = []
-    coins.append(Collectible((100, 1200), "assets/super_mango/coin.png"))
+    coins.append(Collectible((100, 1200), coin_image))
+    coins.append(Collectible((140, 1200), coin_image))
+    coins.append(Collectible((170, 1200), coin_image))
+    coins.append(Collectible((200, 1200), coin_image))
+    coins.append(Collectible((300, 1150), coin_image))
 
     # Birds
     birds = []
