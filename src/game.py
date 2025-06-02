@@ -3,6 +3,7 @@ from math import *
 import os
 import json
 import pygame
+from pygame import font
 
 from constants import *
 
@@ -109,6 +110,23 @@ class World:
 
     def draw(self, surface, camera_pos):
         self.chunk_manager.draw(surface, camera_pos)
+
+
+class Collectible:
+    def __init__(self, pos, image_path):
+        self.pos = pos  # [x, y]
+        self.collected = False
+        self.image = pygame.image.load(image_path)
+        self.rect = pygame.Rect(self.pos[0], self.pos[1], self.image.get_width(), self.image.get_height())
+
+    def draw(self, surface, camera_pos):
+        if not self.collected:
+            screen_pos = (self.pos[0] - camera_pos[0] + surface.get_width() // 2,
+                          self.pos[1] - camera_pos[1] + surface.get_height() // 2)
+            surface.blit(self.image, screen_pos)
+
+    def check_collision(self, player_rect):
+        return not self.collected and self.rect.colliderect(player_rect)
 
 class MovableObject:
     def __init__(self, size):
@@ -260,12 +278,21 @@ class AnimatableObject(MovableObject):
         if self.active_animation != self.animations[name]:
             self.play_animation(name)
 
+class Player(AnimatableObject):
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.collect_count = 0  # Track collected items
+
+    def update_player(self, world, dt):
+        super().update(world, dt)
+
+
 def play_game(screen):
     # World
     world = World()
 
     # Player
-    player = AnimatableObject("assets/super_mango/player")
+    player = Player("assets/super_mango/player")
     player.position = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2 - 100]
     player.play_animation("idle")
 
@@ -313,5 +340,10 @@ def play_game(screen):
 
         world.draw(screen, camera_pos)
         player.draw(screen, camera_pos)
+        # draw collectables
+        font = pygame.font.Font("assets/Minecraft.ttf", 36)
+        text = font.render(f"Collected: {player.collect_count}", True, (255, 255, 0))
+
+        screen.blit(text, (20, 20))
 
         pygame.display.flip()
