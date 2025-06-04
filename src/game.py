@@ -421,8 +421,8 @@ CAMERA_OFFSET = -SCREEN_WIDTH / 8
 EXIT_REASON_WIN = 0
 EXIT_REASON_LOOSE = 1
 EXIT_REASON_QUIT = 2
-
-def play_game(screen, map_number):
+exit_reason_win = [13000,1235,48,48 ]
+def play_game(screen, map_number, total_count_of_coins=0):
     # Assets
     font = pygame.font.Font("assets/Minecraft.ttf", 36)
     heart_empty = load_image_scaled("assets/heart/empty.png", 4)
@@ -477,7 +477,7 @@ def play_game(screen, map_number):
     coins.append(Collectible((11500, 1150), coin_image))#30
     coins.append(Collectible((12000, 1150), coin_image))
 
-    print("Bird")
+
     # Birds
     birds = []
     positions_b = [[550, 1150],[4350,1160],[4230,1170],[9800, 1350]]  # List of positions for each bird
@@ -486,7 +486,7 @@ def play_game(screen, map_number):
         bird = Bird()
         bird.position = pos_b
         birds.append(bird)
-        print(pos_b)
+
     # Spiders
     spiders = []
     positions_s = [[500, 1000], [1100, 1400],[5050,1250],[4050,1200],[4400,1200],[11500,1100]]
@@ -496,7 +496,7 @@ def play_game(screen, map_number):
         spiders.append(spider)
 
     clock = pygame.time.Clock()
-
+    
     # -------- Main Program Loop -----------
     while True:
         for event in pygame.event.get():
@@ -505,6 +505,7 @@ def play_game(screen, map_number):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     player.try_jump(PLAYER_JUMP_HEIGHT)
+
 
         dt = clock.tick(60) / 1000.0
         dt = min(dt, 0.033) # Limit delta time to 33 milliseconds
@@ -545,6 +546,9 @@ def play_game(screen, map_number):
         if player.lives == 0:
             return EXIT_REASON_LOOSE
 
+        if player.get_rect().colliderect(exit_reason_win):
+            return EXIT_REASON_WIN
+
         # Camera
         player_center_x = player.position[0] + player.size[0] / 2
         camera_follow_x = player_center_x - CAMERA_OFFSET
@@ -560,7 +564,8 @@ def play_game(screen, map_number):
             if not coin.collected and player.get_rect().colliderect(coin.rect):
                 coin.collected = True
                 player.collect_count += 1
-
+                total_count_of_coins = player.collect_count
+                print(total_count_of_coins)
         # Draw
 
         # Background
