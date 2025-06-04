@@ -564,9 +564,11 @@ def play_game(screen, map_number, total_count_of_coins=0):
             if not coin.collected and player.get_rect().colliderect(coin.rect):
                 coin.collected = True
                 player.collect_count += 1
-                total_count_of_coins = player.collect_count
-                print(total_count_of_coins)
-        # Draw
+                # Append the count to the file
+                with open('src/count.txt', 'a') as file:
+                    file.write(f"{player.collect_count}\n")
+
+
 
         # Background
         background.draw(screen, camera_pos)

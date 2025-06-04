@@ -51,7 +51,6 @@ class Menu:
             pygame.display.update()
 
     def show_end_screen(self, win):
-        font = pygame.font.Font(None, 74)
         running = True
         while running:
             for event in pygame.event.get():
@@ -67,9 +66,25 @@ class Menu:
             text = self.get_font(100).render(msg, True, color)
             self.screen.blit(text, (200, 200))
             if win == True:
-                info = self.get_font(36).render(f"GOOD JOB. TRY AGAIN.\nYour total count of coin is: ", True, (200, 200, 200))
-                self.screen.blit(info, (230, 300))
+                with open('src/count.txt', 'r') as file:
+                    lines = file.readlines()
+                    if lines:
+                        c_count = lines[-1].strip()
+                    else:
+                        c_count = '0'
+                info = self.get_font(36).render(f"GOOD JOB. TRY AGAIN.",True, (200, 200, 200))
+                info_c = self.get_font(36).render(f"Your total count of coins is: {c_count}", True, (200, 200, 200))
+                self.screen.blit(info, (150, 350))
+                self.screen.blit(info_c, (170, 400))
             elif win == False:
-                info = self.get_font(36).render(f"NOT SO GOOD JOB. TRY AGAIN.\nYour total count of coin is: ", True, (200, 200, 200))
-                self.screen.blit(info, (170, 300))
+                with open('src/count.txt', 'r') as file:
+                    lines = file.readlines()
+                    if lines:
+                        c_count = lines[-1].strip()
+                    else:
+                        c_count = '0'
+                info = self.get_font(36).render(f"NOT SO GOOD JOB. TRY AGAIN.", True, (200, 200, 200))
+                info_c = self.get_font(36).render(f"Your total count of coins is: {c_count}", True, (200, 200, 200))
+                self.screen.blit(info, (150, 350))
+                self.screen.blit(info_c, (170, 400))
             pygame.display.flip()
