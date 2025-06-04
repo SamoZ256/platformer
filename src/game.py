@@ -393,18 +393,47 @@ def play_game(screen, map_number):
     # Coins
     coin_image= load_image_scaled("assets/super_mango/coin.png")# same for spiders and birds
     coins = []
-    coins.append(Collectible((96, 1200), coin_image))
+    coins.append(Collectible((96, 1200), coin_image))#1
     coins.append(Collectible((140, 1200), coin_image))
     coins.append(Collectible((170, 1200), coin_image))
-    coins.append(Collectible((200, 1200), coin_image))
-    coins.append(Collectible((300, 1150), coin_image))
+    coins.append(Collectible((600, 1200), coin_image))
+    coins.append(Collectible((759, 1150), coin_image))#5
+    coins.append(Collectible((1176, 1150), coin_image))
+    coins.append(Collectible((1309, 1150), coin_image))
+    coins.append(Collectible((1603, 1150), coin_image))
+    coins.append(Collectible((1668, 1150), coin_image))
+    coins.append(Collectible((1799, 1100), coin_image))#10
+    coins.append(Collectible((1957, 1050), coin_image))
+    coins.append(Collectible((2493, 1150), coin_image))
+    coins.append(Collectible((2678, 1150), coin_image))
+    coins.append(Collectible((3000, 1150), coin_image))
+    coins.append(Collectible((3500, 1080), coin_image))#15
+    coins.append(Collectible((4000, 1050), coin_image))
+    coins.append(Collectible((4500, 1050), coin_image))
+    coins.append(Collectible((5000, 1150), coin_image))
+    coins.append(Collectible((5500, 1050), coin_image))
+    coins.append(Collectible((6000, 970), coin_image))#20
+    coins.append(Collectible((6500, 1150), coin_image))
+    coins.append(Collectible((7000, 1150), coin_image))
+    coins.append(Collectible((7500, 1450), coin_image))
+    coins.append(Collectible((8000, 1150), coin_image))
+    coins.append(Collectible((8500, 1150), coin_image))#25
+    coins.append(Collectible((9000, 1150), coin_image))
+    coins.append(Collectible((9500, 1150), coin_image))
+    coins.append(Collectible((10000, 1150), coin_image))
+    coins.append(Collectible((10500, 1150), coin_image))
+    coins.append(Collectible((11500, 1150), coin_image))#30
+    coins.append(Collectible((12000, 1150), coin_image))
+
 
     # Birds
     birds = []
     bird = Bird()
     bird.position = [600, 1000]
+    bird.position = [600, 1150]
     birds.append(bird)
-
+    # Spiders
+    #Clock
     clock = pygame.time.Clock()
 
     # -------- Main Program Loop -----------
