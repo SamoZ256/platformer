@@ -418,6 +418,10 @@ class Background:
 CAMERA_DIFF_LIMIT = SCREEN_WIDTH / 15
 CAMERA_OFFSET = -SCREEN_WIDTH / 8
 
+EXIT_REASON_WIN = 0
+EXIT_REASON_LOOSE = 1
+EXIT_REASON_QUIT = 2
+
 def play_game(screen, map_number):
     # Assets
     font = pygame.font.Font("assets/Minecraft.ttf", 36)
@@ -460,7 +464,7 @@ def play_game(screen, map_number):
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return
+                return EXIT_REASON_QUIT
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     player.try_jump(PLAYER_JUMP_HEIGHT)
@@ -500,6 +504,9 @@ def play_game(screen, map_number):
             spider.update(world, dt)
             if player.invincibility_timer == 0.0 and player.get_rect().colliderect(spider.get_rect()):
                 player.take_damage()
+
+        if player.lives == 0:
+            return EXIT_REASON_LOOSE
 
         # Camera
         player_center_x = player.position[0] + player.size[0] / 2
