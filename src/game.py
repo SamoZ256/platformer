@@ -391,9 +391,9 @@ def play_game(screen, map_number):
     camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
 
     # Coins
-    coin_image= load_image_scaled("assets/super_mango/coin.png")
+    coin_image= load_image_scaled("assets/super_mango/coin.png")# same for spiders and birds
     coins = []
-    coins.append(Collectible((100, 1200), coin_image))
+    coins.append(Collectible((96, 1200), coin_image))
     coins.append(Collectible((140, 1200), coin_image))
     coins.append(Collectible((170, 1200), coin_image))
     coins.append(Collectible((200, 1200), coin_image))
