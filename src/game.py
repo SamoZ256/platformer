@@ -327,10 +327,29 @@ class AnimatableObject(MovableObject):
         if self.active_animation != self.animations[name]:
             self.play_animation(name)
 
+PLAYER_INVINCIBILITY_PERIOD = 2.0
+PLAYER_INVINCIBILITY_BLINK_PERIOD = 0.05
+
 class Player(AnimatableObject):
     def __init__(self, filename):
         super().__init__(filename, GRAVITY)
-        self.collect_count = 0  # Track collected items
+        self.collect_count = 0
+        self.lives = 3
+        self.invincibility_timer = 0.0
+
+    def update(self, world, dt):
+        super().update(world, dt)
+        self.invincibility_timer -= dt
+        if self.invincibility_timer < 0.0:
+            self.invincibility_timer = 0.0
+
+    def draw(self, surface, camera_pos):
+        if self.invincibility_timer % (PLAYER_INVINCIBILITY_BLINK_PERIOD * 2) < PLAYER_INVINCIBILITY_BLINK_PERIOD:
+            super().draw(surface, camera_pos)
+
+    def take_damage(self):
+        self.lives -= 1
+        self.invincibility_timer = PLAYER_INVINCIBILITY_PERIOD
 
 BIRD_SPEED = 400
 BIRD_DIR_SWAP_TIME = 3.0
@@ -396,6 +415,9 @@ CAMERA_DIFF_LIMIT = SCREEN_WIDTH / 15
 CAMERA_OFFSET = -SCREEN_WIDTH / 8
 
 def play_game(screen, map_number):
+    # Assets
+    font = pygame.font.Font("assets/Minecraft.ttf", 36)
+
     # World
     world = World(f"assets/maps/{map_number}.txt")
 
@@ -407,6 +429,7 @@ def play_game(screen, map_number):
     player.position = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2 - 100]
     player.play_animation("idle")
 
+    # Camera
     camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
 
     # Coins
@@ -465,8 +488,12 @@ def play_game(screen, map_number):
         player.update(world, dt)
         for bird in birds:
             bird.update(world, dt)
+            if player.invincibility_timer == 0.0 and player.get_rect().colliderect(bird.get_rect()):
+                player.take_damage()
         for spider in spiders:
             spider.update(world, dt)
+            if player.invincibility_timer == 0.0 and player.get_rect().colliderect(spider.get_rect()):
+                player.take_damage()
 
         # Camera
         player_center_x = player.position[0] + player.size[0] / 2
@@ -502,8 +529,10 @@ def play_game(screen, map_number):
         player.draw(screen, camera_pos)
 
         # HUD
-        font = pygame.font.Font("assets/Minecraft.ttf", 36)
         text = font.render(f"Collected: {player.collect_count}", True, (255, 255, 0))
         screen.blit(text, (20, 20))
+        # TODO: heart images
+        text = font.render(f"Lives: {player.lives}", True, (255, 255, 0))
+        screen.blit(text, (SCREEN_WIDTH - text.get_width() - 20, 20))
 
         pygame.display.flip()
