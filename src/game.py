@@ -29,12 +29,15 @@ PLAYER_JUMP_HEIGHT = 800
 IMAGE_SCALE = 3
 NONE_TILE = 0
 
-def load_image_scaled(filename):
+def load_image_scaled(filename, scale):
     image = pygame.image.load(filename).convert_alpha()
-    size = [image.get_width() * IMAGE_SCALE, image.get_height() * IMAGE_SCALE]
+    size = [image.get_width() * scale, image.get_height() * scale]
     image = pygame.transform.scale(image, size)
 
     return image
+
+def load_image_scaled_default(filename):
+    return load_image_scaled(filename, IMAGE_SCALE)
 
 class Tileset:
     def __init__(self, filename):
@@ -48,7 +51,7 @@ class Tileset:
             base_name = os.path.basename(entry.path)
             (name, ext) = base_name.split(".")
             if ext == "png":
-                self.images[int(name)] = load_image_scaled(entry.path)
+                self.images[int(name)] = load_image_scaled_default(entry.path)
 
     def get_image(self, tile):
         return self.images[tile]
@@ -169,7 +172,7 @@ class Collectible:
     def __init__(self, pos, image_path):
         self.pos = pos
         self.collected = False
-        self.image = load_image_scaled(image_path)
+        self.image = load_image_scaled_default(image_path)
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.image.get_width(), self.image.get_height())
 
     def draw(self, surface, camera_pos):
@@ -283,7 +286,7 @@ class Animation:
                 base_name = os.path.basename(entry.path)
                 (name, ext) = base_name.split(".")
                 if ext == "png":
-                    self.images[int(name)] = load_image_scaled(entry.path)
+                    self.images[int(name)] = load_image_scaled_default(entry.path)
 
     def get_size(self):
         return [self.images[0].get_width(), self.images[0].get_height()]
@@ -329,12 +332,13 @@ class AnimatableObject(MovableObject):
 
 PLAYER_INVINCIBILITY_PERIOD = 2.0
 PLAYER_INVINCIBILITY_BLINK_PERIOD = 0.05
+PLAYER_MAX_LIVES = 3
 
 class Player(AnimatableObject):
     def __init__(self, filename):
         super().__init__(filename, GRAVITY)
         self.collect_count = 0
-        self.lives = 3
+        self.lives = PLAYER_MAX_LIVES
         self.invincibility_timer = 0.0
 
     def update(self, world, dt):
@@ -396,7 +400,7 @@ BACKGROUND_SCROLL = 0.2
 
 class Background:
     def __init__(self, filename):
-        self.image = load_image_scaled(filename)
+        self.image = load_image_scaled_default(filename)
 
     def draw(self, surface, camera_pos):
         pos_x = -camera_pos[0] * BACKGROUND_SCROLL
@@ -417,6 +421,8 @@ CAMERA_OFFSET = -SCREEN_WIDTH / 8
 def play_game(screen, map_number):
     # Assets
     font = pygame.font.Font("assets/Minecraft.ttf", 36)
+    heart_empty = load_image_scaled("assets/heart/empty.png", 4)
+    heart_full = load_image_scaled("assets/heart/full.png", 4)
 
     # World
     world = World(f"assets/maps/{map_number}.txt")
@@ -529,10 +535,14 @@ def play_game(screen, map_number):
         player.draw(screen, camera_pos)
 
         # HUD
-        text = font.render(f"Collected: {player.collect_count}", True, (255, 255, 0))
-        screen.blit(text, (20, 20))
-        # TODO: heart images
-        text = font.render(f"Lives: {player.lives}", True, (255, 255, 0))
-        screen.blit(text, (SCREEN_WIDTH - text.get_width() - 20, 20))
+
+        # Coins
+        coin_text = font.render(f"Collected: {player.collect_count}", True, (255, 255, 0))
+        screen.blit(coin_text, (20, 20))
+
+        # Lives
+        for i in range(PLAYER_MAX_LIVES):
+            image = heart_full if i < player.lives else heart_empty
+            screen.blit(image, (SCREEN_WIDTH - (image.get_width() + 20) * (PLAYER_MAX_LIVES - i), 20))
 
         pygame.display.flip()
