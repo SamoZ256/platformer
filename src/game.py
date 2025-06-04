@@ -172,7 +172,7 @@ class Collectible:
     def __init__(self, pos, image):
         self.pos = pos
         self.collected = False
-        self.image = load_image_scaled_default(image_path)
+        self.image = image
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.image.get_width(), self.image.get_height())
 
     def draw(self, surface, camera_pos):
@@ -443,7 +443,7 @@ def play_game(screen, map_number):
     camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
 
     # Coins
-    coin_image= load_image_scaled("assets/super_mango/coin.png")# same for spiders and birds
+    coin_image= load_image_scaled("assets/super_mango/coin.png",2)# same for spiders and birds
     coins = []
     coins.append(Collectible((96, 1200), coin_image))#1
     coins.append(Collectible((140, 1200), coin_image))
@@ -477,19 +477,23 @@ def play_game(screen, map_number):
     coins.append(Collectible((11500, 1150), coin_image))#30
     coins.append(Collectible((12000, 1150), coin_image))
 
-
+    print("Bird")
     # Birds
     birds = []
-    bird = Bird()
-    bird.position = [600, 1000]
-    bird.position = [600, 1150]
-    birds.append(bird)
+    positions_b = [[550, 1150],[4350,1160],[4230,1170],[9800, 1350]]  # List of positions for each bird
 
+    for pos_b in positions_b:
+        bird = Bird()
+        bird.position = pos_b
+        birds.append(bird)
+        print(pos_b)
     # Spiders
     spiders = []
-    spider = Spider()
-    spider.position = [600, 1000]
-    spiders.append(spider)
+    positions_s = [[500, 1000], [1100, 1400],[5050,1250],[4050,1200],[4400,1200],[11500,1100]]
+    for pos_s in positions_s:
+        spider = Spider()
+        spider.position = pos_s
+        spiders.append(spider)
 
     clock = pygame.time.Clock()
 
