@@ -29,12 +29,15 @@ PLAYER_JUMP_HEIGHT = 800
 IMAGE_SCALE = 3
 NONE_TILE = 0
 
-def load_image_scaled(filename):
+def load_image_scaled(filename, scale):
     image = pygame.image.load(filename).convert_alpha()
-    size = [image.get_width() * IMAGE_SCALE, image.get_height() * IMAGE_SCALE]
+    size = [image.get_width() * scale, image.get_height() * scale]
     image = pygame.transform.scale(image, size)
 
     return image
+
+def load_image_scaled_default(filename):
+    return load_image_scaled(filename, IMAGE_SCALE)
 
 class Tileset:
     def __init__(self, filename):
@@ -48,7 +51,7 @@ class Tileset:
             base_name = os.path.basename(entry.path)
             (name, ext) = base_name.split(".")
             if ext == "png":
-                self.images[int(name)] = load_image_scaled(entry.path)
+                self.images[int(name)] = load_image_scaled_default(entry.path)
 
     def get_image(self, tile):
         return self.images[tile]
@@ -169,7 +172,7 @@ class Collectible:
     def __init__(self, pos, image):
         self.pos = pos
         self.collected = False
-        self.image = image
+        self.image = load_image_scaled_default(image_path)
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.image.get_width(), self.image.get_height())
 
     def draw(self, surface, camera_pos):
@@ -283,7 +286,7 @@ class Animation:
                 base_name = os.path.basename(entry.path)
                 (name, ext) = base_name.split(".")
                 if ext == "png":
-                    self.images[int(name)] = load_image_scaled(entry.path)
+                    self.images[int(name)] = load_image_scaled_default(entry.path)
 
     def get_size(self):
         return [self.images[0].get_width(), self.images[0].get_height()]
@@ -327,12 +330,32 @@ class AnimatableObject(MovableObject):
         if self.active_animation != self.animations[name]:
             self.play_animation(name)
 
+PLAYER_INVINCIBILITY_PERIOD = 2.0
+PLAYER_INVINCIBILITY_BLINK_PERIOD = 0.05
+PLAYER_MAX_LIVES = 3
+
 class Player(AnimatableObject):
     def __init__(self, filename):
         super().__init__(filename, GRAVITY)
-        self.collect_count = 0  # Track collected items
+        self.collect_count = 0
+        self.lives = PLAYER_MAX_LIVES
+        self.invincibility_timer = 0.0
 
-BIRD_SPEED = 500
+    def update(self, world, dt):
+        super().update(world, dt)
+        self.invincibility_timer -= dt
+        if self.invincibility_timer < 0.0:
+            self.invincibility_timer = 0.0
+
+    def draw(self, surface, camera_pos):
+        if self.invincibility_timer % (PLAYER_INVINCIBILITY_BLINK_PERIOD * 2) < PLAYER_INVINCIBILITY_BLINK_PERIOD:
+            super().draw(surface, camera_pos)
+
+    def take_damage(self):
+        self.lives -= 1
+        self.invincibility_timer = PLAYER_INVINCIBILITY_PERIOD
+
+BIRD_SPEED = 400
 BIRD_DIR_SWAP_TIME = 3.0
 
 class Bird(AnimatableObject):
@@ -354,11 +377,30 @@ class Bird(AnimatableObject):
 
         super().update(world, dt)
 
+SPIDER_SPEED = 600
+
+class Spider(AnimatableObject):
+    def __init__(self):
+        super().__init__("assets/super_mango/spider", GRAVITY)
+        self.going_left = True
+        self.play_animation("walk")
+
+    def update(self, world, dt):
+        if self.going_left:
+            self.move([-SPIDER_SPEED * dt, 0])
+        else:
+            self.move([SPIDER_SPEED * dt, 0])
+
+        super().update(world, dt)
+
+        if self.momentum[0] == 0.0: # Bumped into a wall
+            self.going_left = not self.going_left
+
 BACKGROUND_SCROLL = 0.2
 
 class Background:
     def __init__(self, filename):
-        self.image = load_image_scaled(filename)
+        self.image = load_image_scaled_default(filename)
 
     def draw(self, surface, camera_pos):
         pos_x = -camera_pos[0] * BACKGROUND_SCROLL
@@ -376,7 +418,16 @@ class Background:
 CAMERA_DIFF_LIMIT = SCREEN_WIDTH / 15
 CAMERA_OFFSET = -SCREEN_WIDTH / 8
 
+EXIT_REASON_WIN = 0
+EXIT_REASON_LOOSE = 1
+EXIT_REASON_QUIT = 2
+
 def play_game(screen, map_number):
+    # Assets
+    font = pygame.font.Font("assets/Minecraft.ttf", 36)
+    heart_empty = load_image_scaled("assets/heart/empty.png", 4)
+    heart_full = load_image_scaled("assets/heart/full.png", 4)
+
     # World
     world = World(f"assets/maps/{map_number}.txt")
 
@@ -388,6 +439,7 @@ def play_game(screen, map_number):
     player.position = [0, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2 - 100]
     player.play_animation("idle")
 
+    # Camera
     camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
 
     # Coins
@@ -432,15 +484,20 @@ def play_game(screen, map_number):
     bird.position = [600, 1000]
     bird.position = [600, 1150]
     birds.append(bird)
+
     # Spiders
-    #Clock
+    spiders = []
+    spider = Spider()
+    spider.position = [600, 1000]
+    spiders.append(spider)
+
     clock = pygame.time.Clock()
 
     # -------- Main Program Loop -----------
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return
+                return EXIT_REASON_QUIT
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     player.try_jump(PLAYER_JUMP_HEIGHT)
@@ -470,8 +527,19 @@ def play_game(screen, map_number):
 
         # Update
 
-        # Player
+        # Sprites
         player.update(world, dt)
+        for bird in birds:
+            bird.update(world, dt)
+            if player.invincibility_timer == 0.0 and player.get_rect().colliderect(bird.get_rect()):
+                player.take_damage()
+        for spider in spiders:
+            spider.update(world, dt)
+            if player.invincibility_timer == 0.0 and player.get_rect().colliderect(spider.get_rect()):
+                player.take_damage()
+
+        if player.lives == 0:
+            return EXIT_REASON_LOOSE
 
         # Camera
         player_center_x = player.position[0] + player.size[0] / 2
@@ -479,10 +547,6 @@ def play_game(screen, map_number):
         camera_diff_x = camera_follow_x - camera_pos[0]
         if abs(camera_diff_x) > CAMERA_DIFF_LIMIT: # If player has moved too far away from the camera
             camera_pos[0] = camera_follow_x + (-CAMERA_DIFF_LIMIT if camera_diff_x > 0.0 else CAMERA_DIFF_LIMIT)
-
-        # Birds
-        for bird in birds:
-            bird.update(world, dt)
 
         # World
         world.update(camera_pos)
@@ -502,15 +566,23 @@ def play_game(screen, map_number):
         world.draw(screen, camera_pos)
 
         # Sprites
-        player.draw(screen, camera_pos)
         for bird in birds:
             bird.draw(screen, camera_pos)
+        for spider in spiders:
+            spider.draw(screen, camera_pos)
         for coin in coins:
             coin.draw(screen, camera_pos)
+        player.draw(screen, camera_pos)
 
         # HUD
-        font = pygame.font.Font("assets/Minecraft.ttf", 36)
-        text = font.render(f"Collected: {player.collect_count}", True, (255, 255, 0))
-        screen.blit(text, (20, 20))
+
+        # Coins
+        coin_text = font.render(f"Collected: {player.collect_count}", True, (255, 255, 0))
+        screen.blit(coin_text, (20, 20))
+
+        # Lives
+        for i in range(PLAYER_MAX_LIVES):
+            image = heart_full if i < player.lives else heart_empty
+            screen.blit(image, (SCREEN_WIDTH - (image.get_width() + 20) * (PLAYER_MAX_LIVES - i), 20))
 
         pygame.display.flip()

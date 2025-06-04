@@ -2,7 +2,7 @@ import pygame
 import sys
 
 from constants import *
-from game import play_game
+from game import *
 from button import Button
 
 
@@ -40,7 +40,13 @@ class Menu:
                     return
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
-                        play_game(self.screen, 1)
+                        exit_reason = play_game(self.screen, 1)
+                        if exit_reason == EXIT_REASON_WIN:
+                            print("YOU WON")
+                        elif exit_reason == EXIT_REASON_LOOSE:
+                            print("YOU LOOSE")
+                        elif exit_reason == EXIT_REASON_QUIT:
+                            pass
                         return
                     if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
                         return
