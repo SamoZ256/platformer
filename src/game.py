@@ -443,7 +443,7 @@ def play_game(screen, map_number, total_count_of_coins=0):
     camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
 
     # Coins
-    coin_image= load_image_scaled("assets/super_mango/coin.png",2)# same for spiders and birds
+    coin_image= load_image_scaled_default("assets/super_mango/coin.png")
     coins = []
     coins.append(Collectible((96, 1200), coin_image))#1
     coins.append(Collectible((140, 1200), coin_image))
@@ -477,11 +477,9 @@ def play_game(screen, map_number, total_count_of_coins=0):
     coins.append(Collectible((11500, 1150), coin_image))#30
     coins.append(Collectible((12000, 1150), coin_image))
 
-
     # Birds
     birds = []
-    positions_b = [[550, 1150],[4350,1160],[4230,1170],[9800, 1350]]  # List of positions for each bird
-
+    positions_b = [[550, 1150],[4350,1160],[4230,1170],[9800, 1350]]
     for pos_b in positions_b:
         bird = Bird()
         bird.position = pos_b
@@ -495,6 +493,11 @@ def play_game(screen, map_number, total_count_of_coins=0):
         spider.position = pos_s
         spiders.append(spider)
 
+    # Star
+    star_image = load_image_scaled("assets/super_mango/Star_Yellow.png", 4)
+    star = Collectible((12500, 1150), star_image)
+
+    # Clock
     clock = pygame.time.Clock()
     
     # -------- Main Program Loop -----------
@@ -505,7 +508,6 @@ def play_game(screen, map_number, total_count_of_coins=0):
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     player.try_jump(PLAYER_JUMP_HEIGHT)
-
 
         dt = clock.tick(60) / 1000.0
         dt = min(dt, 0.033) # Limit delta time to 33 milliseconds
@@ -543,11 +545,11 @@ def play_game(screen, map_number, total_count_of_coins=0):
             if player.invincibility_timer == 0.0 and player.get_rect().colliderect(spider.get_rect()):
                 player.take_damage()
 
+        if player.get_rect().colliderect(star.rect):
+            return EXIT_REASON_WIN
+
         if player.lives == 0:
             return EXIT_REASON_LOOSE
-
-        if player.get_rect().colliderect(exit_reason_win):
-            return EXIT_REASON_WIN
 
         # Camera
         player_center_x = player.position[0] + player.size[0] / 2
@@ -568,8 +570,6 @@ def play_game(screen, map_number, total_count_of_coins=0):
                 with open('src/count.txt', 'a') as file:
                     file.write(f"{player.collect_count}\n")
 
-
-
         # Background
         background.draw(screen, camera_pos)
 
@@ -583,6 +583,7 @@ def play_game(screen, map_number, total_count_of_coins=0):
             spider.draw(screen, camera_pos)
         for coin in coins:
             coin.draw(screen, camera_pos)
+        star.draw(screen, camera_pos)
         player.draw(screen, camera_pos)
 
         # HUD
