@@ -172,7 +172,7 @@ class Collectible:
     def __init__(self, pos, image):
         self.pos = pos
         self.collected = False
-        self.image = load_image_scaled_default(image_path)
+        self.image = image
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.image.get_width(), self.image.get_height())
 
     def draw(self, surface, camera_pos):
@@ -443,7 +443,7 @@ def play_game(screen, map_number):
     camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
 
     # Coins
-    coin_image= load_image_scaled("assets/super_mango/coin.png")# same for spiders and birds
+    coin_image= load_image_scaled_default("assets/super_mango/coin.png")# same for spiders and birds
     coins = []
     coins.append(Collectible((96, 1200), coin_image))#1
     coins.append(Collectible((140, 1200), coin_image))
@@ -477,11 +477,9 @@ def play_game(screen, map_number):
     coins.append(Collectible((11500, 1150), coin_image))#30
     coins.append(Collectible((12000, 1150), coin_image))
 
-
     # Birds
     birds = []
     bird = Bird()
-    bird.position = [600, 1000]
     bird.position = [600, 1150]
     birds.append(bird)
 
@@ -491,6 +489,11 @@ def play_game(screen, map_number):
     spider.position = [600, 1000]
     spiders.append(spider)
 
+    # Star
+    star_image = load_image_scaled("assets/super_mango/Star_Yellow.png", 4)
+    star = Collectible((12500, 1150), star_image)
+
+    # Clock
     clock = pygame.time.Clock()
 
     # -------- Main Program Loop -----------
@@ -537,6 +540,8 @@ def play_game(screen, map_number):
             spider.update(world, dt)
             if player.invincibility_timer == 0.0 and player.get_rect().colliderect(spider.get_rect()):
                 player.take_damage()
+        if player.get_rect().colliderect(star.rect):
+            return EXIT_REASON_WIN
 
         if player.lives == 0:
             return EXIT_REASON_LOOSE
@@ -572,6 +577,7 @@ def play_game(screen, map_number):
             spider.draw(screen, camera_pos)
         for coin in coins:
             coin.draw(screen, camera_pos)
+        star.draw(screen, camera_pos)
         player.draw(screen, camera_pos)
 
         # HUD
