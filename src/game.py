@@ -421,8 +421,8 @@ CAMERA_OFFSET = -SCREEN_WIDTH / 8
 EXIT_REASON_WIN = 0
 EXIT_REASON_LOOSE = 1
 EXIT_REASON_QUIT = 2
-
-def play_game(screen, map_number):
+exit_reason_win = [13000,1235,48,48 ]
+def play_game(screen, map_number, total_count_of_coins=0):
     # Assets
     font = pygame.font.Font("assets/Minecraft.ttf", 36)
     heart_empty = load_image_scaled("assets/heart/empty.png", 4)
@@ -443,7 +443,7 @@ def play_game(screen, map_number):
     camera_pos = [player.position[0] + player.size[0] / 2 - CAMERA_OFFSET, CHUNK_HEIGHT * TILE_SIZE - SCREEN_HEIGHT / 2]
 
     # Coins
-    coin_image= load_image_scaled_default("assets/super_mango/coin.png")# same for spiders and birds
+    coin_image= load_image_scaled_default("assets/super_mango/coin.png")
     coins = []
     coins.append(Collectible((96, 1200), coin_image))#1
     coins.append(Collectible((140, 1200), coin_image))
@@ -479,15 +479,19 @@ def play_game(screen, map_number):
 
     # Birds
     birds = []
-    bird = Bird()
-    bird.position = [600, 1150]
-    birds.append(bird)
+    positions_b = [[550, 1150],[4350,1160],[4230,1170],[9800, 1350]]
+    for pos_b in positions_b:
+        bird = Bird()
+        bird.position = pos_b
+        birds.append(bird)
 
     # Spiders
     spiders = []
-    spider = Spider()
-    spider.position = [600, 1000]
-    spiders.append(spider)
+    positions_s = [[500, 1000], [1100, 1400],[5050,1250],[4050,1200],[4400,1200],[11500,1100]]
+    for pos_s in positions_s:
+        spider = Spider()
+        spider.position = pos_s
+        spiders.append(spider)
 
     # Star
     star_image = load_image_scaled("assets/super_mango/Star_Yellow.png", 4)
@@ -495,7 +499,7 @@ def play_game(screen, map_number):
 
     # Clock
     clock = pygame.time.Clock()
-
+    
     # -------- Main Program Loop -----------
     while True:
         for event in pygame.event.get():
@@ -540,6 +544,7 @@ def play_game(screen, map_number):
             spider.update(world, dt)
             if player.invincibility_timer == 0.0 and player.get_rect().colliderect(spider.get_rect()):
                 player.take_damage()
+
         if player.get_rect().colliderect(star.rect):
             return EXIT_REASON_WIN
 
@@ -561,8 +566,9 @@ def play_game(screen, map_number):
             if not coin.collected and player.get_rect().colliderect(coin.rect):
                 coin.collected = True
                 player.collect_count += 1
-
-        # Draw
+                # Append the count to the file
+                with open('src/count.txt', 'a') as file:
+                    file.write(f"{player.collect_count}\n")
 
         # Background
         background.draw(screen, camera_pos)
